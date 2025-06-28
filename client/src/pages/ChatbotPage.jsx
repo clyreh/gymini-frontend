@@ -38,6 +38,7 @@ const ChatbotPage = () => {
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [chatInput, setChatInput] = useState("");
   const messagesEndRef = useRef(null);
 
   const formFields = [
@@ -56,7 +57,7 @@ const ChatbotPage = () => {
     },
     {
       key: "height",
-      label: "What's your height? (in cm or feet)",
+      label: "What's your height in inches?",
       type: "text",
       icon: <Activity className="w-5 h-5" />,
     },
@@ -103,19 +104,14 @@ const ChatbotPage = () => {
       key: "available_time_per_session",
       label: "How much time can you dedicate per session?",
       type: "select",
-      options: [
-        "15-30 minutes",
-        "30-45 minutes",
-        "45-60 minutes",
-        "60+ minutes",
-      ],
+      options: ["10", "15", "30", "45", "60", "120", "180"],
       icon: <Clock className="w-5 h-5" />,
     },
     {
       key: "days_per_week",
       label: "How many days per week can you work out?",
       type: "select",
-      options: ["1-2 days", "3-4 days", "5-6 days", "7 days"],
+      options: ["1-2", "3-4", "5-6", "7"],
       icon: <Clock className="w-5 h-5" />,
     },
     {
@@ -171,6 +167,33 @@ const ChatbotPage = () => {
     }));
   };
 
+  // API call to your backend
+  const callGeminiAPI = async (inputs) => {
+    try {
+      const response = await fetch("/api/workout-plan", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(inputs),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return (
+        data.workout_plan ||
+        data.message ||
+        "Sorry, I couldn't generate a workout plan at this time."
+      );
+    } catch (error) {
+      console.error("Error calling Gemini API:", error);
+      return "Sorry, there was an error generating your workout plan. Please try again later.";
+    }
+  };
+
   const handleSubmit = async () => {
     const field = formFields[currentStep];
     const value = formData[field.key];
@@ -199,60 +222,77 @@ const ChatbotPage = () => {
         const botMessage = {
           type: "bot",
           content:
-            "Perfect! I have all the information I need. Let me create your personalized workout plan...",
+            "Perfect! I have all the information I need. Let me create your personalized workout plan using AI...",
         };
         setMessages((prev) => [...prev, botMessage]);
 
-        // Simulate workout plan generation
-        setTimeout(() => {
-          generateWorkoutPlan();
-        }, 2000);
+        // Generate workout plan with Gemini AI
+        generateWorkoutPlan();
       }
       setIsLoading(false);
     }, 1000);
   };
 
-  const generateWorkoutPlan = () => {
-    // Placeholder for actual API call to workoutPlanChatBot
-    const workoutPlan = `
-🏋️ **Your Personalized Workout Plan**
+  const generateWorkoutPlan = async () => {
+    setIsLoading(true);
 
-**Program Overview:**
-Based on your profile, I've created a ${formData.goal.toLowerCase()}-focused program that fits your ${formData.fitness_level.toLowerCase()} level and ${
-      formData.available_time_per_session
-    } schedule.
+    try {
+      // Call your Gemini API with the form data
+      const workoutPlan = await callGeminiAPI(formData);
 
-**Weekly Schedule:**
-- Training Days: ${formData.days_per_week}
-- Session Duration: ${formData.available_time_per_session}
-- Equipment: ${formData.available_equipment}
-- Focus: ${formData.target_muscle_groups}
+      const botMessage = {
+        type: "bot",
+        content: workoutPlan,
+      };
+      setMessages((prev) => [...prev, botMessage]);
+      setShowChat(true);
+    } catch (error) {
+      const errorMessage = {
+        type: "bot",
+        content:
+          "I apologize, but I encountered an error while generating your workout plan. Please try again or contact support if the issue persists.",
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-**Sample Workout (Day 1):**
-1. **Warm-up (5-10 min)**
-   - Dynamic stretching
-   - Light cardio
+  const handleChatSubmit = async () => {
+    if (!chatInput.trim()) return;
 
-2. **Main Exercises:**
-   - Exercise 1: 3 sets × 12 reps
-   - Exercise 2: 3 sets × 10 reps
-   - Exercise 3: 3 sets × 15 reps
+    // Add user message
+    const userMessage = { type: "user", content: chatInput };
+    setMessages((prev) => [...prev, userMessage]);
+    setChatInput("");
+    setIsLoading(true);
 
-3. **Cool-down (5 min)**
-   - Static stretching
-   - Deep breathing
+    try {
+      // Create a follow-up prompt that includes the original form data and the new question
+      const followUpInputs = {
+        ...formData,
+        follow_up_question: chatInput,
+        context:
+          "This is a follow-up question about the previously generated workout plan.",
+      };
 
-**Note:** This is a placeholder plan. Your actual plan will be generated using our AI system based on your specific requirements!
+      const response = await callGeminiAPI(followUpInputs);
 
-Ready to start your fitness journey? 💪
-    `;
-
-    const botMessage = {
-      type: "bot",
-      content: workoutPlan,
-    };
-    setMessages((prev) => [...prev, botMessage]);
-    setShowChat(true);
+      const botMessage = {
+        type: "bot",
+        content: response,
+      };
+      setMessages((prev) => [...prev, botMessage]);
+    } catch (error) {
+      const errorMessage = {
+        type: "bot",
+        content:
+          "Sorry, I couldn't process your question at the moment. Please try again.",
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const renderInput = () => {
@@ -305,7 +345,7 @@ Ready to start your fitness journey? 💪
                 AI Workout Coach
               </h1>
               <p className="text-gray-400">
-                Your personalized fitness companion
+                Powered by Gemini AI - Your personalized fitness companion
               </p>
             </div>
           </div>
@@ -383,7 +423,11 @@ Ready to start your fitness journey? 💪
                 <div className="p-4 rounded-2xl bg-gray-800/50 border border-gray-600/50">
                   <div className="flex items-center gap-2">
                     <Loader className="w-4 h-4 animate-spin text-cyan-400" />
-                    <span className="text-gray-300">Thinking...</span>
+                    <span className="text-gray-300">
+                      {showChat
+                        ? "Thinking..."
+                        : "Generating your AI-powered workout plan..."}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -424,10 +468,17 @@ Ready to start your fitness journey? 💪
             <div className="flex gap-3">
               <input
                 type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && handleChatSubmit()}
                 placeholder="Ask me anything about your workout plan..."
                 className="flex-1 bg-gray-800/50 border border-gray-600/50 rounded-xl px-4 py-3 text-white placeholder-gray-400 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20"
               />
-              <button className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-cyan-500 text-white rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/30 flex items-center gap-2">
+              <button
+                onClick={handleChatSubmit}
+                disabled={!chatInput.trim() || isLoading}
+                className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-cyan-500 text-white rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
+              >
                 <Send className="w-5 h-5" />
                 Send
               </button>
