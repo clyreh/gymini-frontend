@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 
 function CamVoiceToggle() {
-  const [cameraOn, setCameraOn] = useState(false);
+  const [cameraOn, setCame5raOn] = useState(false);
   const [voiceOn, setVoiceOn] = useState(false);
 
   return (
