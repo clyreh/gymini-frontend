@@ -2,11 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import CamVoiceToggle from "../components/CamVoiceToggle";
 import ComputerVisionScreen from "../components/ComputerVisionScreen";
-import {
-  Play,
-  ChevronDown,
-  CheckCircle,
-} from "lucide-react";
+import { Play, ChevronDown, CheckCircle } from "lucide-react";
 
 function WorkoutPage() {
   const [userName, setUserName] = useState("");
@@ -114,9 +110,7 @@ function WorkoutPage() {
               <Play className="w-5 h-5" />
               Start Workout
             </button>
-            <button
-              className="px-5 py-3 border-2 border-cyan-500 text-cyan-300 rounded-full text-lg font-semibold hover:bg-cyan-500/10 transition-all duration-300 flex items-center gap-3"
-            >
+            <button className="px-5 py-3 border-2 border-cyan-500 text-cyan-300 rounded-full text-lg font-semibold hover:bg-cyan-500/10 transition-all duration-300 flex items-center gap-3">
               Revise Workout
               <ChevronDown className="w-5 h-5" />
             </button>
@@ -141,8 +135,7 @@ function WorkoutPage() {
             </p>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed mt-4 mb-20">
               - Toggle your camera and voice settings below.
-              <br />
-              - Position your camera towards you as you workout.
+              <br />- Position your camera towards you as you workout.
             </p>
 
             {/* Voice Mode Selection */}

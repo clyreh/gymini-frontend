@@ -20,7 +20,7 @@ const LandingPage = () => {
 
   const handleHeadToApp = () => {
     // Handle navigation to app
-    console.log("Navigate to app");
+    navigate("/wkp");
   };
 
   const features = [
