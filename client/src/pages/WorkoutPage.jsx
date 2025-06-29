@@ -75,12 +75,11 @@ function WorkoutPage() {
             </button>
           </div>
           <div className="absolute right-8">
-            <button
-              onClick={handleHeadToChtBot}
-              className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-cyan-500 text-white rounded-full font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/30"
-            >
-              Personalized Plan
-            </button>
+            <Link to="/cbp">
+              <button className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-cyan-500 text-white rounded-full font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/30">
+                Personalized Plan
+              </button>
+            </Link>
           </div>
         </div>
       </nav>
