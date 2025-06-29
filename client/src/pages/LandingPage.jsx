@@ -1,4 +1,6 @@
 import React, { useRef } from "react";
+import { Link } from "react-router-dom";
+
 import {
   Play,
   ChevronDown,
@@ -137,13 +139,14 @@ const LandingPage = () => {
 
           {/* CTA */}
           <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-20">
-            <button
-              onClick={handleHeadToApp}
+            <Link
+              to="/wkp"
               className="px-10 py-5 bg-gradient-to-r from-indigo-600 to-cyan-500 text-white rounded-full text-lg font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-xl hover:shadow-cyan-500/20 flex items-center gap-3"
             >
               <Play className="w-5 h-5" />
               Try It Now
-            </button>
+            </Link>
+
             <button
               onClick={() => scrollToSection(aboutUsRef)}
               className="px-10 py-5 border-2 border-cyan-500 text-cyan-300 rounded-full text-lg font-semibold hover:bg-cyan-500/10 transition-all duration-300 flex items-center gap-3"
