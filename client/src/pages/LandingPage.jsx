@@ -1,6 +1,5 @@
 import React, { useRef } from "react";
 import { Link } from "react-router-dom";
-
 import {
   Play,
   ChevronDown,
@@ -12,6 +11,11 @@ import {
   Shield,
 } from "lucide-react";
 
+import photo1 from "../assets/photo1.png";
+import photo2 from "../assets/photo2.jpeg";
+import photo3 from "../assets/photo3.jpeg";
+import photo4 from "../assets/photo4.jpeg";
+
 const LandingPage = () => {
   const appRef = useRef(null);
   const aboutUsRef = useRef(null);
@@ -22,7 +26,7 @@ const LandingPage = () => {
 
   const handleHeadToApp = () => {
     // Handle navigation to app
-    navigate("/wkp");
+    console.log("Navigate to app");
   };
 
   const features = [
@@ -54,27 +58,27 @@ const LandingPage = () => {
 
   const aboutUs = [
     {
-      title: "Name",
-      role: "role",
-      avatar: "img",
+      title: "Zahrah",
+      role: "Fullstack Developer",
+      avatar: photo1,
+      linkedin: "https://www.linkedin.com/in/zahrah-rashid/",
+    },
+    {
+      title: "Cheryl",
+      role: "Frontend Developer",
+      avatar: photo2,
+      linkedin: "https://www.linkedin.com/in/cheryl-n-88171a34b/",
+    },
+    {
+      title: "Camila",
+      role: "Backend Developer",
+      avatar: photo3,
       linkedin: "https://linkedin.com/",
     },
     {
-      title: "Name",
-      role: "role",
-      avatar: "img",
-      linkedin: "https://linkedin.com/",
-    },
-    {
-      title: "Name",
-      role: "role",
-      avatar: "img",
-      linkedin: "https://linkedin.com/",
-    },
-    {
-      title: "Name",
-      role: "role",
-      avatar: "img",
+      title: "Kiara",
+      role: "Backend Developer",
+      avatar: photo4,
       linkedin: "https://linkedin.com/",
     },
   ];
@@ -90,7 +94,7 @@ const LandingPage = () => {
               onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
               className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-indigo-500 bg-clip-text text-transparent hover:from-cyan-300 hover:to-indigo-400 transition-all duration-300"
             >
-              AppName
+              Gymini
             </button>
           </div>
 
@@ -100,7 +104,7 @@ const LandingPage = () => {
               onClick={() => scrollToSection(appRef)}
               className="text-gray-300 hover:text-cyan-400 transition-colors duration-300 font-medium"
             >
-              What is AppName
+              What is Gymini?
             </button>
             <button
               onClick={() => scrollToSection(aboutUsRef)}
@@ -231,9 +235,13 @@ const LandingPage = () => {
                   {/* Image Section */}
                   <div className="w-1/2 bg-slate-600 flex items-center justify-center text-white p-8">
                     <div className="text-center">
-                      <div className="text-4xl mb-4">{member.avatar}</div>
+                      <img
+                        src={member.avatar}
+                        alt={member.title}
+                        className="w-24 h-24 rounded-full object-cover mb-4"
+                      />
                       <div className="text-xs uppercase tracking-wider opacity-70">
-                        Image of Person
+                        {member.title}
                       </div>
                     </div>
                   </div>

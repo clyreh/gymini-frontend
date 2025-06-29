@@ -485,4 +485,4 @@ if __name__ == '__main__':
     print(f"Available voice profiles: {list(gemini_ai.voice_profiles.keys())}")
     
     # Run the Flask app
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5001)

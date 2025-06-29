@@ -10,6 +10,7 @@ import io
 from PIL import Image
 import logging
 
+
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
 
@@ -27,6 +28,7 @@ socketio = SocketIO(
     async_mode='threading',
     transports=['websocket', 'polling']
 )
+
 
 # MediaPipe setup
 mp_pose = mp.solutions.pose

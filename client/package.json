@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently \"npm run backend\" \"vite\"",
-    "backend": "python ../backend/computervision.py",
+    "backend": "concurrently \"python ../backend/computervision.py\" \"python ../backend/gemini_fitness_api.py\"",
     "frontend": "vite",
     "build": "vite build",
     "lint": "eslint .",

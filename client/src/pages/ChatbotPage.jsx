@@ -14,6 +14,9 @@ import {
   Volume2,
   VolumeX,
   Mic,
+  Heart,
+  Sparkles,
+  Zap,
 } from "lucide-react";
 
 const ChatbotPage = () => {
@@ -31,6 +34,7 @@ const ChatbotPage = () => {
     target_muscle_groups: "",
     limitations: "",
     experience_level: "",
+    voice_tone: "neutral", // New field for voice tone
   });
   const [messages, setMessages] = useState([
     {
@@ -47,6 +51,7 @@ const ChatbotPage = () => {
     tone: "neutral", // neutral, gymbro, girly
   });
   const [showVoiceSettings, setShowVoiceSettings] = useState(false);
+  const [apiStatus, setApiStatus] = useState("checking"); // checking, connected, error
   const messagesEndRef = useRef(null);
 
   const formFields = [
@@ -157,7 +162,58 @@ const ChatbotPage = () => {
       ],
       icon: <Activity className="w-5 h-5" />,
     },
+    {
+      key: "voice_tone",
+      label: "Choose your AI coach's personality for voice feedback:",
+      type: "voice_select",
+      options: [
+        {
+          value: "neutral",
+          label: "Professional & Neutral",
+          icon: <Bot className="w-5 h-5" />,
+          description: "Clear, professional guidance",
+        },
+        {
+          value: "gymbro",
+          label: "Energetic Gym Bro",
+          icon: <Zap className="w-5 h-5" />,
+          description: "High-energy, motivational style",
+        },
+        {
+          value: "girly",
+          label: "Friendly & Supportive",
+          icon: <Heart className="w-5 h-5" />,
+          description: "Warm, encouraging approach",
+        },
+      ],
+      icon: <Volume2 className="w-5 h-5" />,
+    },
   ];
+
+  // Check API connection on component mount
+  useEffect(() => {
+    checkApiConnection();
+  }, []);
+
+  const checkApiConnection = async () => {
+    try {
+      const response = await fetch("http://localhost:5001/", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        setApiStatus("connected");
+      } else {
+        setApiStatus("error");
+      }
+    } catch (error) {
+      console.error("API connection error:", error);
+      setApiStatus("error");
+    }
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -173,12 +229,22 @@ const ChatbotPage = () => {
       ...prev,
       [field.key]: value,
     }));
+
+    // Sync voice tone with voice settings
+    if (field.key === "voice_tone") {
+      setVoiceSettings((prev) => ({
+        ...prev,
+        tone: value,
+      }));
+    }
   };
 
   // Enhanced API call to your Gemini backend
   const callGeminiAPI = async (inputs, endpoint = "workout-plan") => {
     try {
-      const response = await fetch(`/api/${endpoint}`, {
+      const apiUrl = `http://localhost:5001/api/${endpoint}`;
+
+      const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -191,10 +257,18 @@ const ChatbotPage = () => {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(
+          errorData.error || `HTTP error! status: ${response.status}`
+        );
       }
 
       const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || "API request failed");
+      }
+
       return (
         data.workout_plan ||
         data.response ||
@@ -203,7 +277,12 @@ const ChatbotPage = () => {
       );
     } catch (error) {
       console.error("Error calling Gemini API:", error);
-      return "Sorry, there was an error connecting to the AI service. Please check your internet connection and try again.";
+
+      if (error.message.includes("fetch")) {
+        return "Sorry, I couldn't connect to the AI service. Please make sure the backend server is running on http://localhost:5001 and try again.";
+      }
+
+      return `Sorry, there was an error: ${error.message}. Please try again.`;
     }
   };
 
@@ -212,7 +291,7 @@ const ChatbotPage = () => {
     if (!voiceSettings.enabled) return;
 
     try {
-      const response = await fetch("/api/voice-output", {
+      const response = await fetch("http://localhost:5001/api/voice-output", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -236,10 +315,13 @@ const ChatbotPage = () => {
     const field = formFields[currentStep];
     const value = formData[field.key];
 
-    if (!value.trim()) return;
+    if (!value || (typeof value === "string" && !value.trim())) return;
 
     // Add user message
-    const userMessage = { type: "user", content: value };
+    const userMessage = {
+      type: "user",
+      content: typeof value === "string" ? value : `Selected: ${value}`,
+    };
     setMessages((prev) => [...prev, userMessage]);
 
     setIsLoading(true);
@@ -310,7 +392,7 @@ const ChatbotPage = () => {
       const errorMessage = {
         type: "bot",
         content:
-          "I apologize, but I encountered an error while generating your workout plan. Please try again or contact support if the issue persists.",
+          "I apologize, but I encountered an error while generating your workout plan. Please make sure the backend server is running and try again.",
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
@@ -373,6 +455,43 @@ const ChatbotPage = () => {
   const renderInput = () => {
     const field = formFields[currentStep];
 
+    if (field.type === "voice_select") {
+      return (
+        <div className="space-y-4">
+          {field.options.map((option) => (
+            <div
+              key={option.value}
+              onClick={() => handleInputChange(option.value)}
+              className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-300 transform hover:scale-[1.02] ${
+                formData[field.key] === option.value
+                  ? "border-cyan-400 bg-cyan-500/10 shadow-lg shadow-cyan-500/20"
+                  : "border-gray-600/50 bg-gray-800/30 hover:border-gray-500"
+              }`}
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <div
+                  className={`p-2 rounded-lg ${
+                    formData[field.key] === option.value
+                      ? "bg-cyan-500/20 text-cyan-400"
+                      : "bg-gray-700/50 text-gray-400"
+                  }`}
+                >
+                  {option.icon}
+                </div>
+                <span className="font-semibold text-white">{option.label}</span>
+                {formData[field.key] === option.value && (
+                  <CheckCircle className="w-5 h-5 text-cyan-400 ml-auto" />
+                )}
+              </div>
+              <p className="text-sm text-gray-400 ml-11">
+                {option.description}
+              </p>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
     if (field.type === "select") {
       return (
         <div className="relative">
@@ -406,6 +525,28 @@ const ChatbotPage = () => {
     );
   };
 
+  const getApiStatusColor = () => {
+    switch (apiStatus) {
+      case "connected":
+        return "text-green-400";
+      case "error":
+        return "text-red-400";
+      default:
+        return "text-yellow-400";
+    }
+  };
+
+  const getApiStatusText = () => {
+    switch (apiStatus) {
+      case "connected":
+        return "Connected to Gemini AI";
+      case "error":
+        return "Backend Server Offline";
+      default:
+        return "Checking Connection...";
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-800 text-white">
       {/* Header */}
@@ -419,10 +560,14 @@ const ChatbotPage = () => {
               <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-cyan-400 bg-clip-text text-transparent">
                 AI Workout Coach
               </h1>
-              <p className="text-gray-400">
-                Powered by Gemini AI - Your personalized fitness companion with
-                voice feedback
-              </p>
+              <div className="flex items-center gap-3">
+                <p className="text-gray-400">
+                  Powered by Gemini AI - Your personalized fitness companion
+                </p>
+                <div className={`text-xs ${getApiStatusColor()}`}>
+                  • {getApiStatusText()}
+                </div>
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -480,7 +625,7 @@ const ChatbotPage = () => {
                     }
                     className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm"
                   >
-                    <option value="neutral">Neutral</option>
+                    <option value="neutral">Professional</option>
                     <option value="gymbro">Gym Bro</option>
                     <option value="girly">Friendly</option>
                   </select>
@@ -581,19 +726,44 @@ const ChatbotPage = () => {
               </h3>
             </div>
 
-            <div className="flex gap-3">
+            <div
+              className={`${
+                formFields[currentStep].type === "voice_select"
+                  ? ""
+                  : "flex gap-3"
+              }`}
+            >
               {renderInput()}
-              <button
-                onClick={handleSubmit}
-                disabled={
-                  !formData[formFields[currentStep].key].trim() || isLoading
-                }
-                className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-cyan-500 text-white rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
-              >
-                <Send className="w-5 h-5" />
-                Send
-              </button>
+              {formFields[currentStep].type !== "voice_select" && (
+                <button
+                  onClick={handleSubmit}
+                  disabled={
+                    !formData[formFields[currentStep].key] ||
+                    (typeof formData[formFields[currentStep].key] ===
+                      "string" &&
+                      !formData[formFields[currentStep].key].trim()) ||
+                    isLoading
+                  }
+                  className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-cyan-500 text-white rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
+                >
+                  <Send className="w-5 h-5" />
+                  Send
+                </button>
+              )}
             </div>
+
+            {formFields[currentStep].type === "voice_select" && (
+              <div className="mt-4 flex justify-end">
+                <button
+                  onClick={handleSubmit}
+                  disabled={!formData[formFields[currentStep].key] || isLoading}
+                  className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-cyan-500 text-white rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2"
+                >
+                  <Send className="w-5 h-5" />
+                  Continue
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -623,7 +793,7 @@ const ChatbotPage = () => {
               or "Explain this exercise"
               {voiceSettings.enabled && (
                 <span className="ml-2 text-cyan-400">
-                  🔊 Voice responses enabled
+                  🔊 Voice responses enabled ({voiceSettings.tone})
                 </span>
               )}
             </p>

@@ -24,6 +24,10 @@ function WorkoutPage() {
   const handleHeadToApp = () => {
     alert("Navigating to app...");
   };
+  const handleHeadToChtBot = () => {
+    // Handle navigation to app
+    navigate("/cbp");
+  };
 
   const modeStyles = {
     Neutral: {
@@ -52,7 +56,7 @@ function WorkoutPage() {
               onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
               className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-indigo-500 bg-clip-text text-transparent hover:from-cyan-300 hover:to-indigo-400 transition-all duration-300"
             >
-              AppName
+              Gymini
             </button>
           </div>
 
@@ -67,16 +71,15 @@ function WorkoutPage() {
               onClick={() => scrollToSection(todaysWorkoutRef)}
               className="text-gray-300 hover:text-cyan-400 transition-colors duration-300 font-medium"
             >
-              About Us
+              Today's Workout
             </button>
           </div>
-
           <div className="absolute right-8">
             <button
-              onClick={handleHeadToApp}
-              className="px-8 py-3 bg-cyan-500 text-white rounded-full font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/30"
+              onClick={handleHeadToChtBot}
+              className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-cyan-500 text-white rounded-full font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/30"
             >
-              -
+              Personalized Plan
             </button>
           </div>
         </div>

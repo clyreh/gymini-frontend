@@ -14,53 +14,106 @@ function ComputerVisionScreen() {
   const [analysis, setAnalysis] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState("disconnected");
 
-  // Initialize socket connection
+  // Full skeleton connections for complete body structure
+  const skeletonConnections = [
+    // Face outline
+    [0, 1],
+    [1, 2],
+    [2, 3],
+    [3, 7],
+    [0, 4],
+    [4, 5],
+    [5, 6],
+    [6, 8],
+
+    // Upper body
+    [9, 10], // mouth
+    [11, 12], // shoulders
+    [11, 13],
+    [13, 15], // left arm
+    [12, 14],
+    [14, 16], // right arm
+
+    // Hands
+    [15, 17],
+    [15, 19],
+    [15, 21],
+    [17, 19], // left hand
+    [16, 18],
+    [16, 20],
+    [16, 22],
+    [18, 20], // right hand
+
+    // Torso
+    [11, 23],
+    [12, 24],
+    [23, 24], // torso connection
+
+    // Legs
+    [23, 25],
+    [25, 27], // left leg
+    [24, 26],
+    [26, 28], // right leg
+
+    // Feet
+    [27, 29],
+    [27, 31], // left foot
+    [28, 30],
+    [28, 32], // right foot
+  ];
+
   useEffect(() => {
-    const connectSocket = () => {
-      socketRef.current = io("http://localhost:5000", {
-        transports: ["websocket", "polling"],
-        timeout: 5000,
-        reconnection: true,
-        reconnectionDelay: 1000,
-        reconnectionAttempts: 5,
-      });
+    socketRef.current = io("http://localhost:5000", {
+      transports: ["websocket", "polling"],
+      timeout: 5000,
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
+    });
 
-      socketRef.current.on("connect", () => {
-        setConnectionStatus("connected");
-        console.log("Connected to computer vision server");
-      });
+    socketRef.current.on("connect", () => {
+      setConnectionStatus("connected");
+      console.log("Connected to computer vision server");
+    });
 
-      socketRef.current.on("disconnect", (reason) => {
-        setConnectionStatus("disconnected");
-        console.log("Disconnected from server:", reason);
-      });
+    socketRef.current.on("disconnect", (reason) => {
+      setConnectionStatus("disconnected");
+      console.log("Disconnected from server:", reason);
+    });
 
-      socketRef.current.on("connect_error", (error) => {
-        setConnectionStatus("error");
-        console.error("Connection error:", error);
-      });
+    socketRef.current.on("connect_error", (error) => {
+      setConnectionStatus("error");
+      console.error("Connection error:", error);
+    });
 
-      socketRef.current.on("connection_response", (data) => {
-        console.log("Server response:", data.message);
-      });
+    socketRef.current.on("connection_response", (data) => {
+      console.log("Server response:", data.message);
+    });
 
-      socketRef.current.on("analysis_result", (data) => {
-        if (data.error) {
-          console.error("Analysis error:", data.error);
-        } else {
-          setAnalysis(data);
-          drawPoseLandmarks(data.landmarks);
-        }
-      });
-    };
-
-    connectSocket();
+    socketRef.current.on("analysis_result", (data) => {
+      if (data.error) {
+        console.error("Analysis error:", data.error);
+      } else {
+        setAnalysis(data);
+        drawSkeletonPose(data.landmarks, data.analysis?.score);
+      }
+    });
 
     return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
+      socketRef.current.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    const setCanvasSize = () => {
+      if (videoRef.current && canvasRef.current) {
+        canvasRef.current.width = videoRef.current.videoWidth;
+        canvasRef.current.height = videoRef.current.videoHeight;
       }
     };
+    videoRef.current?.addEventListener("loadedmetadata", setCanvasSize);
+    return () =>
+      videoRef.current?.removeEventListener("loadedmetadata", setCanvasSize);
   }, []);
 
   const startCamera = async () => {
@@ -89,21 +142,15 @@ function ComputerVisionScreen() {
 
   const captureFrame = () => {
     if (!videoRef.current || !canvasRef.current) return null;
-
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
-
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0);
-
     return canvas.toDataURL("image/jpeg", 0.8);
   };
 
   const sendFrameForAnalysis = () => {
     if (!cameraOn || connectionStatus !== "connected") return;
-
     const frameData = captureFrame();
     if (frameData && socketRef.current) {
       socketRef.current.emit("video_frame", {
@@ -118,14 +165,11 @@ function ComputerVisionScreen() {
       alert("Please turn on the camera first");
       return;
     }
-
     if (connectionStatus !== "connected") {
       alert("Not connected to analysis server");
       return;
     }
-
     setIsAnalyzing(true);
-    // Send frames every 200ms for real-time analysis
     intervalRef.current = setInterval(sendFrameForAnalysis, 200);
   };
 
@@ -139,57 +183,90 @@ function ComputerVisionScreen() {
     clearCanvas();
   };
 
-  const drawPoseLandmarks = (landmarks) => {
+  const drawSkeletonPose = (landmarks, score = 100) => {
     if (!landmarks || !canvasRef.current || !videoRef.current) return;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
-    const video = videoRef.current;
+    const width = canvas.width;
+    const height = canvas.height;
 
-    // Clear previous drawings
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, width, height);
 
-    // Draw pose landmarks
-    ctx.fillStyle = "#00ff00";
-    ctx.strokeStyle = "#00ff00";
-    ctx.lineWidth = 2;
+    // Set dynamic line color based on score
+    let color = "#00ff00"; // green
+    if (score < 60) color = "#ff0000"; // red
+    else if (score < 80) color = "#ffff00"; // yellow
 
-    const width = video.videoWidth;
-    const height = video.videoHeight;
+    // Draw skeleton connections (bones)
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3; // Thicker lines for skeleton effect
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
 
-    // Draw landmarks as circles
-    landmarks.forEach((landmark, index) => {
-      if (landmark.visibility > 0.5) {
-        const x = landmark.x * width;
-        const y = landmark.y * height;
+    // Draw all skeleton connections
+    skeletonConnections.forEach(([pointA, pointB]) => {
+      drawSkeletonConnection(
+        landmarks,
+        pointA,
+        pointB,
+        ctx,
+        width,
+        height,
+        color
+      );
+    });
 
+    // Highlight specific connections based on exercise mode
+    if (exerciseMode === "pushup") {
+      // Emphasize arm connections for push-ups
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = color;
+      drawSkeletonConnection(landmarks, 11, 13, ctx, width, height, color);
+      drawSkeletonConnection(landmarks, 13, 15, ctx, width, height, color);
+      drawSkeletonConnection(landmarks, 12, 14, ctx, width, height, color);
+      drawSkeletonConnection(landmarks, 14, 16, ctx, width, height, color);
+    } else if (exerciseMode === "squat") {
+      // Emphasize leg connections for squats
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = color;
+      drawSkeletonConnection(landmarks, 23, 25, ctx, width, height, color);
+      drawSkeletonConnection(landmarks, 25, 27, ctx, width, height, color);
+      drawSkeletonConnection(landmarks, 24, 26, ctx, width, height, color);
+      drawSkeletonConnection(landmarks, 26, 28, ctx, width, height, color);
+    }
+
+    // Draw small joint points only at key positions
+    ctx.fillStyle = color;
+    const keyJoints = [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28]; // shoulders, elbows, wrists, hips, knees, ankles
+
+    keyJoints.forEach((jointIndex) => {
+      if (landmarks[jointIndex] && landmarks[jointIndex].visibility > 0.5) {
+        const x = landmarks[jointIndex].x * width;
+        const y = landmarks[jointIndex].y * height;
         ctx.beginPath();
-        ctx.arc(x, y, 3, 0, 2 * Math.PI);
+        ctx.arc(x, y, 2, 0, 2 * Math.PI); // Very small joint points
         ctx.fill();
       }
     });
-
-    // Draw connections for key points based on exercise
-    if (exerciseMode === "pushup") {
-      drawConnection(landmarks, 11, 13, ctx, width, height); // Left shoulder to elbow
-      drawConnection(landmarks, 13, 15, ctx, width, height); // Left elbow to wrist
-      drawConnection(landmarks, 12, 14, ctx, width, height); // Right shoulder to elbow
-      drawConnection(landmarks, 14, 16, ctx, width, height); // Right elbow to wrist
-    } else if (exerciseMode === "squat") {
-      drawConnection(landmarks, 23, 25, ctx, width, height); // Left hip to knee
-      drawConnection(landmarks, 25, 27, ctx, width, height); // Left knee to ankle
-      drawConnection(landmarks, 24, 26, ctx, width, height); // Right hip to knee
-      drawConnection(landmarks, 26, 28, ctx, width, height); // Right knee to ankle
-    }
   };
 
-  const drawConnection = (landmarks, pointA, pointB, ctx, width, height) => {
+  const drawSkeletonConnection = (
+    landmarks,
+    pointA,
+    pointB,
+    ctx,
+    width,
+    height,
+    color
+  ) => {
     if (
       landmarks[pointA] &&
       landmarks[pointB] &&
       landmarks[pointA].visibility > 0.5 &&
       landmarks[pointB].visibility > 0.5
     ) {
+      ctx.strokeStyle = color;
       ctx.beginPath();
       ctx.moveTo(landmarks[pointA].x * width, landmarks[pointA].y * height);
       ctx.lineTo(landmarks[pointB].x * width, landmarks[pointB].y * height);
@@ -198,8 +275,8 @@ function ComputerVisionScreen() {
   };
 
   const clearCanvas = () => {
-    if (canvasRef.current) {
-      const ctx = canvasRef.current.getContext("2d");
+    const ctx = canvasRef.current?.getContext("2d");
+    if (ctx) {
       ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
     }
   };
@@ -214,10 +291,9 @@ function ComputerVisionScreen() {
     <div className="w-full max-w-4xl mx-auto p-6 bg-gray-900 rounded-xl">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-white mb-4">
-          Exercise Form Analyzer
+          Skeleton Exercise Form Analyzer
         </h2>
 
-        {/* Connection Status */}
         <div className="flex items-center gap-2 mb-4">
           <div
             className={`w-3 h-3 rounded-full ${
@@ -230,7 +306,6 @@ function ComputerVisionScreen() {
           </span>
         </div>
 
-        {/* Exercise Mode Selection */}
         <div className="flex gap-4 mb-4">
           <button
             onClick={() => setExerciseMode("pushup")}
@@ -255,7 +330,6 @@ function ComputerVisionScreen() {
         </div>
       </div>
 
-      {/* Video Container */}
       <div className="relative w-full max-w-2xl mx-auto mb-6">
         <div className="relative bg-gray-800 border-2 border-gray-500 rounded-xl overflow-hidden">
           <video
@@ -268,10 +342,8 @@ function ComputerVisionScreen() {
           <canvas
             ref={canvasRef}
             className="absolute top-0 left-0 w-full h-full pointer-events-none"
-            style={{ mixBlendMode: "screen" }}
           />
 
-          {/* Camera Controls */}
           <div className="absolute top-4 left-1/2 transform -translate-x-1/2 flex gap-2 z-10">
             <button
               onClick={cameraOn ? stopCamera : startCamera}
@@ -296,13 +368,11 @@ function ComputerVisionScreen() {
         </div>
       </div>
 
-      {/* Analysis Results */}
       {analysis && (
         <div className="bg-gray-800 rounded-lg p-6">
           <h3 className="text-xl font-bold text-white mb-4">Form Analysis</h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Score */}
             <div className="bg-gray-700 rounded-lg p-4">
               <h4 className="text-lg font-semibold text-white mb-2">Score</h4>
               <div
@@ -317,7 +387,6 @@ function ComputerVisionScreen() {
               </div>
             </div>
 
-            {/* Feedback */}
             <div className="bg-gray-700 rounded-lg p-4">
               <h4 className="text-lg font-semibold text-white mb-2">
                 Feedback
@@ -333,18 +402,6 @@ function ComputerVisionScreen() {
           </div>
         </div>
       )}
-
-      {/* Instructions */}
-      <div className="mt-6 bg-gray-800 rounded-lg p-4">
-        <h4 className="text-lg font-semibold text-white mb-2">Instructions</h4>
-        <div className="text-gray-300 text-sm space-y-1">
-          <p>1. Make sure your Flask server is running on localhost:5000</p>
-          <p>2. Select your exercise mode (Push-up or Squat)</p>
-          <p>3. Turn on your camera and position yourself in frame</p>
-          <p>4. Click "Start Analysis" to begin real-time form checking</p>
-          <p>5. Follow the feedback to improve your form</p>
-        </div>
-      </div>
     </div>
   );
 }
