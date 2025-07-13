@@ -8,7 +8,7 @@ Gymini was created to help users improve their form and stay motivated during wo
 
 ## My Contributions
 
-As a **UI/UX and frontend contributor** using **Procreate**, **React**, and **Tailwind CSS**, I worked on:
+As a **UI/UX and frontend contributor** using **Procreate**, **React**, **JavaScript**, and **Tailwind CSS**, I worked on:
 
 - Designing and developing the **landing page navigation** and **About Us section**
 - Building the **workout page** layout and **integrating the camera interface**
