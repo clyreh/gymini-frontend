@@ -17,6 +17,7 @@ As part of the team, I worked on the **User Interface, User Experience, and Fron
 ## Project Links
 
 🔗 Full-Stack Original Repository:: [https://github.com/mbarbosa1/GeminiApp]
+
 🎨 This Repository: Focused on the frontend/UI work I developed
 
 ## Built At
