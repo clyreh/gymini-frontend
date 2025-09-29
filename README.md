@@ -16,9 +16,11 @@ As part of the team, I worked on the **User Interface, User Experience, and Fron
 
 ## Project Links
 
-🔗 Full-Stack Original Repository:: [https://github.com/mbarbosa1/GeminiApp]
+🔗 Full-Stack Original Repository (Team Repo): [https://github.com/mbarbosa1/GeminiApp]
 
-🎨 This Repository: Focused on the frontend/UI work I developed
+🎨 This Repository (My Frontend Contributions): https://github.com/clyreh/gymini-frontend
+
+📽 Devpost Submission (Demos & Visuals): https://devpost.com/software/workoutwgemini?ref_content=my-projects-tab&ref_feature=my_projects
 
 ## Built At
 
